@@ -19,9 +19,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/iqoption/zecutil"
 	"github.com/sirupsen/logrus"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -59,7 +57,6 @@ var _ = Describe("LibZEC", func() {
 	}
 
 	buildHaskLockContract := func(secretHash [32]byte, to btcutil.Address) ([]byte, error) {
-		decoded := base58.Decode(to.(*zecutil.ZecAddressPubKeyHash).String())
 		b := txscript.NewScriptBuilder()
 		b.AddOp(txscript.OP_SIZE)
 		b.AddData([]byte{32})
@@ -69,7 +66,7 @@ var _ = Describe("LibZEC", func() {
 		b.AddOp(txscript.OP_EQUALVERIFY)
 		b.AddOp(txscript.OP_DUP)
 		b.AddOp(txscript.OP_HASH160)
-		b.AddData(decoded[2 : len(decoded)-4])
+		b.AddData(to.ScriptAddress())
 		b.AddOp(txscript.OP_EQUALVERIFY)
 		b.AddOp(txscript.OP_CHECKSIG)
 		return b.Script()
@@ -103,15 +100,13 @@ var _ = Describe("LibZEC", func() {
 		if err != nil {
 			panic(err)
 		}
-		addr, err := zecutil.EncodeHash(btcutil.Hash160(contract), zecutil.TestNet3.ScriptHashPrefixes)
+		hash20 := [20]byte{}
+		copy(hash20[:], btcutil.Hash160(contract))
+		contractAddress, err := AddressFromHash160(hash20, net, true)
 		if err != nil {
 			panic(err)
 		}
-		contractAddress, err := zecutil.DecodeAddress(addr, "testnet3")
-		if err != nil {
-			panic(err)
-		}
-		payToContractPublicKey, err := zecutil.PayToAddrScript(contractAddress)
+		payToContractPublicKey, err := PayToAddrScript(contractAddress)
 		return contract, payToContractPublicKey, contractAddress
 	}
 
@@ -212,7 +207,7 @@ var _ = Describe("LibZEC", func() {
 				contract, _, contractAddress := getContractDetails(spender, secondaryAccount.NetworkParams(), secret)
 				initialBalance, err := secondaryAccount.Balance(context.Background(), contractAddress.EncodeAddress(), 0)
 				Expect(err).Should(BeNil())
-				P2PKHScript, err := zecutil.PayToAddrScript(spender)
+				P2PKHScript, err := PayToAddrScript(spender)
 				Expect(err).Should(BeNil())
 
 				// building a transaction to transfer zcash to the secondary address

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/iqoption/zecutil"
-
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -72,7 +70,7 @@ func (client *client) SerializePublicKey(pubKey *btcec.PublicKey) ([]byte, error
 func (client *client) PublicKeyToAddress(pubKeyBytes []byte) (btcutil.Address, error) {
 	hash20 := [20]byte{}
 	copy(hash20[:], btcutil.Hash160(pubKeyBytes))
-	return zecutil.NewAddressPubKeyHash(hash20, client.NetworkParams().Name), nil
+	return AddressFromHash160(hash20, client.NetworkParams(), false)
 }
 
 func NewMercuryClient(network string) (Client, error) {

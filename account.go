@@ -14,7 +14,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/iqoption/zecutil"
 	"github.com/sirupsen/logrus"
 )
 
@@ -99,7 +98,7 @@ func (account *account) Transfer(ctx context.Context, to string, value int64, sp
 		value = balance
 	}
 
-	address, err := zecutil.DecodeAddress(to, account.NetworkParams().Name)
+	address, err := DecodeAddress(to, account.NetworkParams())
 	if err != nil {
 		return "", 0, err
 	}
@@ -109,7 +108,7 @@ func (account *account) Transfer(ctx context.Context, to string, value int64, sp
 		speed,
 		nil,
 		func(tx *wire.MsgTx) bool {
-			P2PKHScript, err := zecutil.PayToAddrScript(address)
+			P2PKHScript, err := PayToAddrScript(address)
 			if err != nil {
 				return false
 			}
@@ -156,11 +155,9 @@ func (account *account) SendTransaction(
 			return "", 0, err
 		}
 	} else {
-		addr, err := zecutil.EncodeHash(btcutil.Hash160(contract), zecutil.TestNet3.ScriptHashPrefixes)
-		if err != nil {
-			return "", 0, err
-		}
-		address, err = zecutil.DecodeAddress(addr, "testnet3")
+		hash20 := [20]byte{}
+		copy(hash20[:], btcutil.Hash160(contract))
+		address, err = AddressFromHash160(hash20, account.NetworkParams(), true)
 		if err != nil {
 			return "", 0, err
 		}

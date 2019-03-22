@@ -26,9 +26,11 @@ type tx struct {
 }
 
 func (account *account) newTx(ctx context.Context, msgtx *wire.MsgTx) *tx {
-	zmsgTx := &zecutil.MsgTx{msgtx, ZCashExpiryHeight}
 	return &tx{
-		msgTx:   zmsgTx,
+		msgTx: &zecutil.MsgTx{
+			MsgTx:        msgtx,
+			ExpiryHeight: ZCashExpiryHeight,
+		},
 		account: account,
 		ctx:     ctx,
 	}
@@ -90,7 +92,7 @@ func (tx *tx) fund(addr btcutil.Address) error {
 	}
 
 	if value <= -MaxZCashFee {
-		P2PKHScript, err := zecutil.PayToAddrScript(addr)
+		P2PKHScript, err := PayToAddrScript(addr)
 		if err != nil {
 			return err
 		}
