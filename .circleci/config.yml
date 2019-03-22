@@ -1,0 +1,118 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2.1
+
+_defaults: &defaults
+    docker:
+      - image: circleci/golang:1.9
+    working_directory: /go/src/github.com/renproject/libzec-go
+
+commands:
+  rw_checkout:
+    description: "Checkout with Read/Write Privileges"
+    steps:
+      - run:
+          name: Setup Git
+          command: |
+            WORKING_DIR=$(eval echo ${CIRCLE_WORKING_DIRECTORY})
+            RW_REPO_URL="https://${GITHUB_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
+
+            if [ -e ${WORKING_DIR}/.git ]
+            then
+              cd ${WORKING_DIR}
+              git remote set-url origin "${RW_REPO_URL}" || true
+              git fetch --force origin "master:remotes/origin/master"
+            else
+              mkdir -p ${WORKING_DIR}
+              cd ${WORKING_DIR}
+              git clone ${RW_REPO_URL} .
+            fi
+            git fetch --all
+  merge:
+    description: "Merge from branch into another branch"
+    parameters:
+      from:
+        description: The branch with changes to be merged into another branch
+        type: string
+      into:
+        description: The branch onto which changes will be applied
+        type: string
+    steps:
+      - rw_checkout
+      - run:
+          name: Merging branch
+          command: |
+            git reset --hard
+            git checkout --track origin/<< parameters.into >>
+            git merge origin/<< parameters.from >> -v
+            git push
+
+jobs:
+  merge_nightly:
+    <<: *defaults
+    steps:
+      - merge:
+          from: master
+          into: nightly
+  merge_beta:
+    <<: *defaults
+    steps:
+      - merge:
+          from: nightly
+          into: beta
+  merge_stable:
+    <<: *defaults
+    steps:
+      - merge:
+          from: beta
+          into: stable
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - run:
+          name: Installing dependencies
+          command: go get -v -t -d ./...
+      - run:
+          name: Running tests
+          command: go test -v ./...
+
+workflows:
+  version: 2.1
+  build:
+    jobs:
+    - build
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 2 * * *" # every night at 02:00
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - merge_nightly:
+          filters:
+            branches:
+              only: master
+  monthly:
+    triggers:
+      - schedule:
+          cron: "0 0 1 * *" # on the 1st of every month at 00:00
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - merge_stable:
+          filters:
+            branches:
+              only: master
+      - merge_beta:
+          filters:
+            branches:
+              only: master
+          # Only run merge_beta after merge_stable is run
+          requires:
+            - merge_stable
