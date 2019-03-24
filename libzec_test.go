@@ -120,7 +120,6 @@ var _ = Describe("LibZEC", func() {
 				addr, err := mainAccount.Address()
 				Expect(err).Should(BeNil())
 				Expect(addr.IsForNet(&chaincfg.TestNet3Params)).Should(BeTrue())
-				fmt.Println("Address: ", addr)
 			})
 
 			It("should get correct network of an account", func() {
@@ -143,7 +142,6 @@ var _ = Describe("LibZEC", func() {
 				Expect(err).Should(BeNil())
 				balance, err := mainAccount.Balance(context.Background(), addr.String(), 0)
 				Expect(err).Should(BeNil())
-				fmt.Printf("%s: %d ZAT", addr, balance)
 			})
 
 			It("should transfer 10000 ZAT to another address", func() {
@@ -176,7 +174,6 @@ var _ = Describe("LibZEC", func() {
 					func(msgtx *wire.MsgTx) bool {
 						funded, val, err := mainAccount.ScriptFunded(context.Background(), contractAddress.EncodeAddress(), 50000)
 						if err != nil {
-							fmt.Println(err)
 							return false
 						}
 						if !funded {
@@ -230,7 +227,6 @@ var _ = Describe("LibZEC", func() {
 						builder.AddData(secret[:])
 					},
 					func(msgtx *wire.MsgTx) bool {
-						fmt.Println("post-con check", contractAddress.EncodeAddress(), spender.EncodeAddress())
 						spent, _, err := secondaryAccount.ScriptSpent(context.Background(), contractAddress.EncodeAddress(), spender.EncodeAddress())
 						if err != nil {
 							return false

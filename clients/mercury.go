@@ -100,8 +100,6 @@ func (client *mercuryClient) ScriptSpent(ctx context.Context, script, spender st
 }
 
 func (client *mercuryClient) ScriptFunded(ctx context.Context, address string, value int64) (bool, int64, error) {
-	fmt.Println(fmt.Sprintf("%s/script/funded/%s?value=%d", client.URL, address, value))
-
 	var scriptResp btc.GetScriptResponse
 	resp, err := http.Get(fmt.Sprintf("%s/script/funded/%s?value=%d", client.URL, address, value))
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -143,14 +141,10 @@ func (client *mercuryClient) PublishTransaction(ctx context.Context, stx []byte)
 	req := btc.PostTransactionRequest{
 		SignedTransaction: hex.EncodeToString(stx),
 	}
-
-	fmt.Println(hex.EncodeToString(stx))
-
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(&req); err != nil {
 		return err
 	}
-
 	if resp, err := http.Post(fmt.Sprintf("%s/tx", client.URL), "application/json", buf); err != nil || resp.StatusCode != http.StatusCreated {
 		if err != nil {
 			return err
