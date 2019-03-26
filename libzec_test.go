@@ -110,6 +110,45 @@ var _ = Describe("LibZEC", func() {
 		return contract, payToContractPublicKey, contractAddress
 	}
 
+	Context("when interacting with mainnet", func() {
+		It("should get a valid address of an account", func() {
+			client, err := NewMercuryClient("mainnet")
+			Expect(err).Should(BeNil())
+			mainAccount, _ := getAccounts(client)
+			addr, err := mainAccount.Address()
+			Expect(err).Should(BeNil())
+			Expect(addr.IsForNet(&chaincfg.MainNetParams)).Should(BeTrue())
+		})
+
+		It("should get correct network of an account", func() {
+			client, err := NewMercuryClient("mainnet")
+			Expect(err).Should(BeNil())
+			mainAccount, _ := getAccounts(client)
+			Expect(mainAccount.NetworkParams()).Should(Equal(&chaincfg.MainNetParams))
+		})
+
+		It("should get a valid serialized public key of an account", func() {
+			client, err := NewMercuryClient("mainnet")
+			Expect(err).Should(BeNil())
+			mainAccount, _ := getAccounts(client)
+			pubKey, err := mainAccount.SerializedPublicKey()
+			Expect(err).Should(BeNil())
+			Expect(btcec.IsCompressedPubKey(pubKey)).Should(BeTrue())
+			_, err = btcec.ParsePubKey(pubKey, btcec.S256())
+			Expect(err).Should(BeNil())
+		})
+
+		It("should get the balance of an address", func() {
+			client, err := NewMercuryClient("mainnet")
+			Expect(err).Should(BeNil())
+			mainAccount, _ := getAccounts(client)
+			addr, err := mainAccount.Address()
+			Expect(err).Should(BeNil())
+			_, err = mainAccount.Balance(context.Background(), addr.String(), 0)
+			Expect(err).Should(BeNil())
+		})
+	})
+
 	for _, client := range buildClients() {
 		var secret [32]byte
 		rand.Read(secret[:])
@@ -140,7 +179,7 @@ var _ = Describe("LibZEC", func() {
 				mainAccount, _ := getAccounts(client)
 				addr, err := mainAccount.Address()
 				Expect(err).Should(BeNil())
-				balance, err := mainAccount.Balance(context.Background(), addr.String(), 0)
+				_, err = mainAccount.Balance(context.Background(), addr.String(), 0)
 				Expect(err).Should(BeNil())
 			})
 
