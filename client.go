@@ -47,9 +47,9 @@ func (client *client) Balance(ctx context.Context, address string, confirmations
 func (client *client) FormatTransactionView(msg, txhash string) string {
 	switch client.NetworkParams().Name {
 	case "mainnet":
-		return fmt.Sprintf("%s, transaction can be viewed at https://live.blockcypher.com/btc/tx/%s", msg, txhash)
+		return fmt.Sprintf("%s, transaction can be viewed at https://chain.so/tx/ZEC/%s", msg, txhash)
 	case "testnet3":
-		return fmt.Sprintf("%s, transaction can be viewed at https://live.blockcypher.com/btc-testnet/tx/%s", msg, txhash)
+		return fmt.Sprintf("%s, transaction can be viewed at https://chain.so/tx/ZECTEST/%s", msg, txhash)
 	default:
 		return ""
 	}
