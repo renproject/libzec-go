@@ -131,7 +131,6 @@ func (tx *tx) fundAll(addr btcutil.Address) error {
 }
 
 func (tx *tx) sign(f func(*txscript.ScriptBuilder), updateTxIn func(*wire.TxIn), contract []byte) error {
-
 	var subScript []byte
 	if contract == nil {
 		subScript = tx.scriptPublicKey
@@ -167,45 +166,6 @@ func (tx *tx) sign(f func(*txscript.ScriptBuilder), updateTxIn func(*wire.TxIn),
 		txin.SignatureScript = sigScript
 	}
 	return nil
-}
-
-func (tx *tx) estimateSTXSize(f func(*txscript.ScriptBuilder), updateTxIn func(*wire.TxIn), contract []byte) (int, error) {
-	var subScript []byte
-	if contract == nil {
-		subScript = tx.scriptPublicKey
-	} else {
-		subScript = contract
-	}
-	serializedPublicKey, err := tx.account.SerializedPublicKey()
-	if err != nil {
-		return 0, err
-	}
-
-	txCopy := tx.msgTx.Copy()
-	for i, txin := range txCopy.TxIn {
-		if updateTxIn != nil {
-			updateTxIn(txin)
-		}
-		sig, err := zecutil.RawTxInSignature(tx.msgTx, i, subScript, txscript.SigHashAll, tx.account.PrivKey, tx.receiveValues[i])
-		if err != nil {
-			return 0, err
-		}
-		builder := txscript.NewScriptBuilder()
-		builder.AddData(sig)
-		builder.AddData(serializedPublicKey)
-		if f != nil {
-			f(builder)
-		}
-		if contract != nil {
-			builder.AddData(contract)
-		}
-		sigScript, err := builder.Script()
-		if err != nil {
-			return 0, err
-		}
-		txin.SignatureScript = sigScript
-	}
-	return txCopy.SerializeSize(), nil
 }
 
 func (tx *tx) submit() error {
