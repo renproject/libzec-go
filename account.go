@@ -197,7 +197,7 @@ func (account *account) SendTransaction(
 			}
 			for i := 0; i < 60; i++ {
 				if postCond == nil || postCond(tx.msgTx.MsgTx) {
-					account.Logger.Infof("successfully submitted the tx", err)
+					account.Logger.Info("successfully submitted the tx")
 					return tx.msgTx.TxHash().String(), txFee, nil
 				}
 				time.Sleep(5 * time.Second)
