@@ -8,7 +8,7 @@ require (
 	github.com/btcsuite/btcutil v0.0.0-20190207003914-4c204d697803
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792
-	github.com/codahale/blake2 v0.0.0-20150924215134-8d10d0420cbf // indirect
+	github.com/codahale/blake2 v0.0.0-20150924215134-8d10d0420cbf
 	github.com/ethereum/go-ethereum v1.8.23
 	github.com/hpcloud/tail v1.0.0
 	github.com/iqoption/zecutil v0.0.0-20181123060914-2cb80ea5c0ce
