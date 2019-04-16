@@ -6,6 +6,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	"github.com/renproject/libzec-go/clients"
 	"github.com/renproject/libzec-go/errors"
@@ -26,6 +27,13 @@ type Client interface {
 
 	// PublicKeyToAddress converts the public key to a zcash address.
 	PublicKeyToAddress(pubKeyBytes []byte) (btcutil.Address, error)
+
+	// SlaveAddress creates an a deterministic address that can be spent by the
+	// private key correspndong to the given master public key hash
+	SlaveAddress(mpkh, nonce []byte) (btcutil.Address, error)
+
+	// UTXOCount returns the number of utxos that can be spent.
+	UTXOCount(ctx context.Context, address string, confirmations int64) (int, error)
 }
 
 type client struct {
@@ -71,6 +79,32 @@ func (client *client) PublicKeyToAddress(pubKeyBytes []byte) (btcutil.Address, e
 	hash20 := [20]byte{}
 	copy(hash20[:], btcutil.Hash160(pubKeyBytes))
 	return AddressFromHash160(hash20, client.NetworkParams(), false)
+}
+
+func (client *client) UTXOCount(ctx context.Context, address string, confirmations int64) (int, error) {
+	utxos, err := client.GetUTXOs(ctx, address, 999999, confirmations)
+	if err != nil {
+		return 0, err
+	}
+	return len(utxos), nil
+}
+
+func (client *client) SlaveAddress(mpkh, nonce []byte) (btcutil.Address, error) {
+	b := txscript.NewScriptBuilder()
+	b.AddData(nonce)
+	b.AddOp(txscript.OP_DROP)
+	b.AddOp(txscript.OP_DUP)
+	b.AddOp(txscript.OP_HASH160)
+	b.AddData(mpkh)
+	b.AddOp(txscript.OP_EQUALVERIFY)
+	b.AddOp(txscript.OP_CHECKSIG)
+	script, err := b.Script()
+	if err != nil {
+		return nil, nil
+	}
+	scriptHash := [20]byte{}
+	copy(scriptHash[:], btcutil.Hash160(script))
+	return AddressFromHash160(scriptHash, client.NetworkParams(), true)
 }
 
 func NewMercuryClient(network string) (Client, error) {
