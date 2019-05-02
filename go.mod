@@ -18,6 +18,9 @@ require (
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/renproject/mercury v0.0.0-20190321013155-23499d524cd8
+	github.com/republicprotocol/co-go v0.0.0-20180723052914-4e299fdb0e80 // indirect
+	github.com/republicprotocol/renvm-go v0.0.0-20190320052535-795f34011fa2
+	github.com/republicprotocol/tau v0.0.0-20190116001021-54c2ea27fbc3
 	github.com/sirupsen/logrus v1.3.0
 	github.com/tyler-smith/go-bip32 v0.0.0-20170922074101-2c9cfd177564
 	github.com/tyler-smith/go-bip39 v1.0.0
