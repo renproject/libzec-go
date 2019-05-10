@@ -21,10 +21,13 @@ type txBuilder struct {
 	client    Client
 }
 
+// NewTxBuilder creates a new tx builder.
 func NewTxBuilder(client Client) TxBuilder {
 	return &txBuilder{2, 10000, 600, client}
 }
 
+// The TxBuilder can build txs, that allow the user to extract the hashes to be
+// signed.
 type TxBuilder interface {
 	Build(ctx context.Context, pubKey ecdsa.PublicKey, to string, contract []byte, value int64, mwIns, scriptIns int) (Tx, error)
 }

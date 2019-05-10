@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
+	"github.com/iqoption/zecutil"
 	"github.com/renproject/libzec-go/clients"
 	"github.com/renproject/libzec-go/errors"
 )
@@ -38,6 +39,9 @@ type Client interface {
 
 	// UTXOCount returns the number of utxos that can be spent.
 	UTXOCount(ctx context.Context, address string, confirmations int64) (int, error)
+
+	// Validate returns whether an address is valid or not
+	Validate(address string) error
 }
 
 type client struct {
@@ -91,6 +95,11 @@ func (client *client) UTXOCount(ctx context.Context, address string, confirmatio
 		return 0, err
 	}
 	return len(utxos), nil
+}
+
+func (client *client) Validate(address string) error {
+	_, err := zecutil.DecodeAddress(address, client.NetworkParams().Name)
+	return err
 }
 
 func (client *client) SlaveAddress(mpkh, nonce []byte) (btcutil.Address, error) {
