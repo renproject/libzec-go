@@ -1,7 +1,6 @@
 package libzec
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -17,7 +16,7 @@ type Client interface {
 	clients.ClientCore
 
 	// Balance of the given address on ZCash blockchain.
-	Balance(ctx context.Context, address string, confirmations int64) (int64, error)
+	Balance(address string, confirmations int64) (int64, error)
 
 	// FormatTransactionView formats the message and txhash into a user friendly
 	// message.
@@ -38,7 +37,7 @@ type Client interface {
 	SlaveScript(mpkh, nonce []byte) ([]byte, error)
 
 	// UTXOCount returns the number of utxos that can be spent.
-	UTXOCount(ctx context.Context, address string, confirmations int64) (int, error)
+	UTXOCount(address string, confirmations int64) (int, error)
 
 	// Validate returns whether an address is valid or not
 	Validate(address string) error
@@ -48,8 +47,8 @@ type client struct {
 	clients.ClientCore
 }
 
-func (client *client) Balance(ctx context.Context, address string, confirmations int64) (int64, error) {
-	utxos, err := client.GetUTXOs(ctx, address, 999999, confirmations)
+func (client *client) Balance(address string, confirmations int64) (int64, error) {
+	utxos, err := client.GetUTXOs(address, 999999, confirmations)
 	if err != nil {
 		return 0, err
 	}
@@ -89,8 +88,8 @@ func (client *client) PublicKeyToAddress(pubKeyBytes []byte) (btcutil.Address, e
 	return AddressFromHash160(hash20, client.NetworkParams(), false)
 }
 
-func (client *client) UTXOCount(ctx context.Context, address string, confirmations int64) (int, error) {
-	utxos, err := client.GetUTXOs(ctx, address, 999999, confirmations)
+func (client *client) UTXOCount(address string, confirmations int64) (int, error) {
+	utxos, err := client.GetUTXOs(address, 999999, confirmations)
 	if err != nil {
 		return 0, err
 	}
@@ -125,6 +124,14 @@ func (client *client) SlaveScript(mpkh, nonce []byte) ([]byte, error) {
 }
 func NewMercuryClient(network string) (Client, error) {
 	core, err := clients.NewMercuryClientCore(network)
+	if err != nil {
+		return nil, err
+	}
+	return &client{core}, nil
+}
+
+func NewChainSoClient(network string) (Client, error) {
+	core, err := clients.NewChainSoClientCore(network)
 	if err != nil {
 		return nil, err
 	}

@@ -91,7 +91,7 @@ func (account *account) Transfer(ctx context.Context, to string, value int64, sp
 		if err != nil {
 			return "", 0, err
 		}
-		balance, err := account.Balance(ctx, me.EncodeAddress(), 0)
+		balance, err := account.Balance(me.EncodeAddress(), 0)
 		if err != nil {
 			return "", 0, err
 		}
@@ -142,7 +142,7 @@ func (account *account) SendTransaction(
 	sendAll bool,
 ) (string, int64, error) {
 	// Current ZCash Transaction Version (Sapling: 4) .
-	tx := account.newTx(ctx, wire.NewMsgTx(4))
+	tx := account.newTx(wire.NewMsgTx(4))
 	if preCond != nil && !preCond(tx.msgTx.MsgTx) {
 		return "", 0, ErrPreConditionCheckFailed
 	}

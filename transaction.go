@@ -2,7 +2,6 @@ package libzec
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"fmt"
 
@@ -22,17 +21,15 @@ type tx struct {
 	scriptPublicKey []byte
 	account         *account
 	msgTx           *zecutil.MsgTx
-	ctx             context.Context
 }
 
-func (account *account) newTx(ctx context.Context, msgtx *wire.MsgTx) *tx {
+func (account *account) newTx(msgtx *wire.MsgTx) *tx {
 	return &tx{
 		msgTx: &zecutil.MsgTx{
 			MsgTx:        msgtx,
 			ExpiryHeight: ZCashExpiryHeight,
 		},
 		account: account,
-		ctx:     ctx,
 	}
 }
 
@@ -53,7 +50,7 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		value = value + j.Value
 	}
 
-	balance, err := tx.account.Balance(tx.ctx, addr.EncodeAddress(), 0)
+	balance, err := tx.account.Balance(addr.EncodeAddress(), 0)
 	if err != nil {
 		return err
 	}
@@ -62,7 +59,7 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		return NewErrInsufficientBalance(addr.EncodeAddress(), value+MaxZCashFee, balance)
 	}
 
-	utxos, err := tx.account.GetUTXOs(tx.ctx, addr.EncodeAddress(), 999999, 0)
+	utxos, err := tx.account.GetUTXOs(addr.EncodeAddress(), 999999, 0)
 	if err != nil {
 		return err
 	}
@@ -104,7 +101,7 @@ func (tx *tx) fund(addr btcutil.Address) error {
 }
 
 func (tx *tx) fundAll(addr btcutil.Address) error {
-	utxos, err := tx.account.GetUTXOs(tx.ctx, addr.EncodeAddress(), 1000, 0)
+	utxos, err := tx.account.GetUTXOs(addr.EncodeAddress(), 1000, 0)
 	if err != nil {
 		return err
 	}
@@ -173,5 +170,5 @@ func (tx *tx) submit() error {
 	if err := tx.msgTx.ZecEncode(buf, 0, wire.BaseEncoding); err != nil {
 		return err
 	}
-	return tx.account.PublishTransaction(tx.ctx, buf.Bytes())
+	return tx.account.PublishTransaction(buf.Bytes())
 }

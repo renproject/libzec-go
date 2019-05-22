@@ -2,7 +2,6 @@ package clients
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -41,7 +40,7 @@ func (client *mercuryClient) NetworkParams() *chaincfg.Params {
 	return client.Params
 }
 
-func (client *mercuryClient) GetUTXOs(ctx context.Context, address string, limit, confitmations int64) ([]UTXO, error) {
+func (client *mercuryClient) GetUTXOs(address string, limit, confitmations int64) ([]UTXO, error) {
 	utxos := []UTXO{}
 	resp, err := http.Get(fmt.Sprintf("%s/utxo/%s?limit=%d&confirmations=%d", client.URL, address, limit, confitmations))
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -54,14 +53,13 @@ func (client *mercuryClient) GetUTXOs(ctx context.Context, address string, limit
 		}
 		return utxos, fmt.Errorf("request failed with (%d): %s", resp.StatusCode, respErr.Error)
 	}
-
 	if err := json.NewDecoder(resp.Body).Decode(&utxos); err != nil {
 		return utxos, err
 	}
 	return utxos, nil
 }
 
-func (client *mercuryClient) Confirmations(ctx context.Context, txHash string) (int64, error) {
+func (client *mercuryClient) Confirmations(txHash string) (int64, error) {
 	var conf btc.GetConfirmationsResponse
 	resp, err := http.Get(fmt.Sprintf("%s/confirmations/%s", client.URL, txHash))
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -80,7 +78,7 @@ func (client *mercuryClient) Confirmations(ctx context.Context, txHash string) (
 	return int64(conf), nil
 }
 
-func (client *mercuryClient) ScriptSpent(ctx context.Context, script, spender string) (bool, string, error) {
+func (client *mercuryClient) ScriptSpent(script, spender string) (bool, string, error) {
 	var scriptResp btc.GetScriptResponse
 	resp, err := http.Get(fmt.Sprintf("%s/script/spent/%s?spender=%s", client.URL, script, spender))
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -99,7 +97,7 @@ func (client *mercuryClient) ScriptSpent(ctx context.Context, script, spender st
 	return scriptResp.Status, scriptResp.Script, nil
 }
 
-func (client *mercuryClient) ScriptFunded(ctx context.Context, address string, value int64) (bool, int64, error) {
+func (client *mercuryClient) ScriptFunded(address string, value int64) (bool, int64, error) {
 	var scriptResp btc.GetScriptResponse
 	resp, err := http.Get(fmt.Sprintf("%s/script/funded/%s?value=%d", client.URL, address, value))
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -118,7 +116,7 @@ func (client *mercuryClient) ScriptFunded(ctx context.Context, address string, v
 	return scriptResp.Status, scriptResp.Value, nil
 }
 
-func (client *mercuryClient) ScriptRedeemed(ctx context.Context, address string, value int64) (bool, int64, error) {
+func (client *mercuryClient) ScriptRedeemed(address string, value int64) (bool, int64, error) {
 	var scriptResp btc.GetScriptResponse
 	resp, err := http.Get(fmt.Sprintf("%s/script/redeemed/%s?value=%d", client.URL, address, value))
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -137,7 +135,7 @@ func (client *mercuryClient) ScriptRedeemed(ctx context.Context, address string,
 	return scriptResp.Status, scriptResp.Value, nil
 }
 
-func (client *mercuryClient) PublishTransaction(ctx context.Context, stx []byte) error {
+func (client *mercuryClient) PublishTransaction(stx []byte) error {
 	req := btc.PostTransactionRequest{
 		SignedTransaction: hex.EncodeToString(stx),
 	}

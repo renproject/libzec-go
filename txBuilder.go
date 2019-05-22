@@ -2,7 +2,6 @@ package libzec
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
@@ -29,13 +28,13 @@ func NewTxBuilder(client Client) TxBuilder {
 // The TxBuilder can build txs, that allow the user to extract the hashes to be
 // signed.
 type TxBuilder interface {
-	Build(ctx context.Context, pubKey ecdsa.PublicKey, to string, contract []byte, value int64, mwIns, scriptIns int) (Tx, error)
+	Build(pubKey ecdsa.PublicKey, to string, contract []byte, value int64, mwIns, scriptIns int) (Tx, error)
 }
 
 type Tx interface {
 	Hashes() [][]byte
 	InjectSigs(sigs []*btcec.Signature) error
-	Submit(ctx context.Context) ([]byte, error)
+	Submit() ([]byte, error)
 }
 
 type transaction struct {
@@ -49,7 +48,6 @@ type transaction struct {
 }
 
 func (builder *txBuilder) Build(
-	ctx context.Context,
 	pubKey ecdsa.PublicKey,
 	to string,
 	contract []byte,
@@ -78,14 +76,14 @@ func (builder *txBuilder) Build(
 
 	var sent int64
 	var amt int64
-	recvVals, pubKeyScript, err := fundZecTx(ctx, from, nil, builder.client, msgTx, mwIns)
+	recvVals, pubKeyScript, err := fundZecTx(from, nil, builder.client, msgTx, mwIns)
 	if err != nil {
 		return nil, err
 	}
 	amt = sum(recvVals)
 
 	if contract != nil {
-		recvVals2, _, err := fundZecTx(ctx, from, contract, builder.client, msgTx, scriptIns)
+		recvVals2, _, err := fundZecTx(from, contract, builder.client, msgTx, scriptIns)
 		if err != nil {
 			return nil, err
 		}
@@ -179,18 +177,18 @@ func (tx *transaction) InjectSigs(sigs []*btcec.Signature) error {
 	return nil
 }
 
-func (tx *transaction) Submit(ctx context.Context) ([]byte, error) {
+func (tx *transaction) Submit() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := tx.msgTx.ZecEncode(buf, 0, wire.BaseEncoding); err != nil {
 		return nil, err
 	}
-	if err := tx.client.PublishTransaction(ctx, buf.Bytes()); err != nil {
+	if err := tx.client.PublishTransaction(buf.Bytes()); err != nil {
 		return nil, err
 	}
 	return hex.DecodeString(tx.msgTx.TxHash().String())
 }
 
-func fundZecTx(ctx context.Context, from btcutil.Address, script []byte, client Client, msgTx *zecutil.MsgTx, n int) ([]int64, []byte, error) {
+func fundZecTx(from btcutil.Address, script []byte, client Client, msgTx *zecutil.MsgTx, n int) ([]int64, []byte, error) {
 	receiveValues := make([]int64, n)
 	if script != nil {
 		script20 := [20]byte{}
@@ -202,7 +200,7 @@ func fundZecTx(ctx context.Context, from btcutil.Address, script []byte, client 
 		from = scriptAddr
 	}
 
-	utxos, err := client.GetUTXOs(ctx, from.EncodeAddress(), int64(n), 0)
+	utxos, err := client.GetUTXOs(from.EncodeAddress(), int64(n), 0)
 	if err != nil {
 		return receiveValues, nil, err
 	}
