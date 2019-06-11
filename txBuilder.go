@@ -55,7 +55,7 @@ func (builder *txBuilder) Build(
 	mwIns, scriptIns int,
 ) (Tx, error) {
 	if value < builder.fee+builder.dust {
-		return nil, fmt.Errorf("minimum transfer amount is : %d", builder.dust+builder.fee+1)
+		return nil, fmt.Errorf("minimum transfer amount is: %d current: %d", builder.dust+builder.fee, value)
 	}
 	value -= builder.fee
 
@@ -109,7 +109,7 @@ func (builder *txBuilder) Build(
 
 	fmt.Println("utxos being used: ")
 	for i, txIn := range msgTx.TxIn {
-		fmt.Printf("[%d]: %s\n", i, txIn.PreviousOutPoint.Hash.String())
+		fmt.Printf("[%d]: %s:%d\n", i, txIn.PreviousOutPoint.Hash.String(), txIn.PreviousOutPoint.Index)
 	}
 
 	if value > 0 {
