@@ -22,7 +22,7 @@ type txBuilder struct {
 
 // NewTxBuilder creates a new tx builder.
 func NewTxBuilder(client Client) TxBuilder {
-	return &txBuilder{2, 10000, 600, client}
+	return &txBuilder{4, 10000, 600, client}
 }
 
 // The TxBuilder can build txs, that allow the user to extract the hashes to be
@@ -54,6 +54,11 @@ func (builder *txBuilder) Build(
 	value int64,
 	mwIns, scriptIns int,
 ) (Tx, error) {
+	if value < builder.fee+builder.dust {
+		return nil, fmt.Errorf("minimum transfer amount is : %d", builder.dust+builder.fee+1)
+	}
+	value -= builder.fee
+
 	pubKeyBytes, err := builder.client.SerializePublicKey((*btcec.PublicKey)(&pubKey))
 	if err != nil {
 		return nil, err
@@ -70,7 +75,7 @@ func (builder *txBuilder) Build(
 	}
 
 	msgTx := &zecutil.MsgTx{
-		MsgTx:        wire.NewMsgTx(4),
+		MsgTx:        wire.NewMsgTx(builder.version),
 		ExpiryHeight: ZCashExpiryHeight,
 	}
 
