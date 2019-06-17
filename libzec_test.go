@@ -2,14 +2,12 @@ package libzec_test
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,7 +16,6 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/sirupsen/logrus"
@@ -184,14 +181,14 @@ var _ = Describe("LibZEC", func() {
 				Expect(err).Should(BeNil())
 			})
 
-			It("should transfer 10000 ZAT to another address", func() {
+			It("should transfer 20000 ZAT to another address", func() {
 				mainAccount, secondaryAccount := getAccounts(client)
 				secAddr, err := secondaryAccount.Address()
 				Expect(err).Should(BeNil())
 				initialBalance, err := secondaryAccount.Balance(secAddr.String(), 0)
 				Expect(err).Should(BeNil())
 				// building a transaction to transfer zcash to the secondary address
-				_, _, err = mainAccount.Transfer(context.Background(), secAddr.String(), 10000, Fast, false)
+				_, _, err = mainAccount.Transfer(secAddr.String(), 20000, false)
 				Expect(err).Should(BeNil())
 				finalBalance, err := secondaryAccount.Balance(secAddr.String(), 0)
 				Expect(err).Should(BeNil())
@@ -211,7 +208,7 @@ var _ = Describe("LibZEC", func() {
 				count, err := client.UTXOCount(mainAddr.String(), 0)
 				Expect(err).Should(BeNil())
 				builder := NewTxBuilder(client)
-				tx, err := builder.Build(mainKey.PublicKey, secAddr.String(), nil, 10000, count, 0)
+				tx, err := builder.Build(mainKey.PublicKey, secAddr.String(), nil, 20000, count, 0)
 				Expect(err).Should(BeNil())
 
 				hashes := tx.Hashes()
@@ -220,7 +217,7 @@ var _ = Describe("LibZEC", func() {
 					sigs[i], err = mainPrivKey.Sign(hash)
 					Expect(err).Should(BeNil())
 				}
-				Expect(tx.InjectSigs(sigs)).Should(BeNil())
+				Expect(tx.InjectSigs(sigs, nil)).Should(BeNil())
 
 				initialBalance, err := secondaryAccount.Balance(secAddr.String(), 0)
 				Expect(err).Should(BeNil())
@@ -236,10 +233,7 @@ var _ = Describe("LibZEC", func() {
 			It("should transfer 10000 ZAT from a slave address", func() {
 				mainKey, err := loadKey(44, 1, 0, 0, 0) // "m/44'/1'/0'/0/0"
 				Expect(err).Should(BeNil())
-				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-				defer cancel()
 				mainPrivKey := (*btcec.PrivateKey)(mainKey)
-
 				mainAccount, secondaryAccount := getAccounts(client)
 				nonce := [32]byte{}
 				pubKeyBytes, err := client.SerializePublicKey((*btcec.PublicKey)(&mainPrivKey.PublicKey))
@@ -248,7 +242,7 @@ var _ = Describe("LibZEC", func() {
 				Expect(err).Should(BeNil())
 				slaveScript, err := mainAccount.SlaveScript(btcutil.Hash160(pubKeyBytes), nonce[:])
 				Expect(err).Should(BeNil())
-				_, _, err = mainAccount.Transfer(ctx, slaveAddr.String(), 20000, Fast, false)
+				_, _, err = mainAccount.Transfer(slaveAddr.String(), 30000, false)
 				Expect(err).Should(BeNil())
 
 				mainAddr, err := mainAccount.Address()
@@ -256,7 +250,7 @@ var _ = Describe("LibZEC", func() {
 				count, err := client.UTXOCount(mainAddr.String(), 0)
 				Expect(err).Should(BeNil())
 				builder := NewTxBuilder(client)
-				tx, err := builder.Build(mainKey.PublicKey, mainAddr.String(), slaveScript, 10000, count, 1)
+				tx, err := builder.Build(mainKey.PublicKey, mainAddr.String(), slaveScript, 20000, count, 1)
 				Expect(err).Should(BeNil())
 
 				hashes := tx.Hashes()
@@ -265,7 +259,7 @@ var _ = Describe("LibZEC", func() {
 					sigs[i], err = mainPrivKey.Sign(hash)
 					Expect(err).Should(BeNil())
 				}
-				Expect(tx.InjectSigs(sigs)).Should(BeNil())
+				Expect(tx.InjectSigs(sigs, nil)).Should(BeNil())
 				initialBalance, err := secondaryAccount.Balance(mainAddr.String(), 0)
 				Expect(err).Should(BeNil())
 				// building a transaction to receive bitcoin from a script address
@@ -281,39 +275,16 @@ var _ = Describe("LibZEC", func() {
 				mainAccount, secondaryAccount := getAccounts(client)
 				spender, err := secondaryAccount.Address()
 				Expect(err).Should(BeNil())
-				_, payToContractPublicKey, contractAddress := getContractDetails(spender, mainAccount.NetworkParams(), secret)
-				initialBalance, err := secondaryAccount.Balance(contractAddress.EncodeAddress(), 0)
+				_, _, contractAddr := getContractDetails(spender, mainAccount.NetworkParams(), secret)
+				contractAddress := contractAddr.EncodeAddress()
+				initialBalance, err := secondaryAccount.Balance(contractAddress, 0)
 				Expect(err).Should(BeNil())
 				// building a transaction to transfer zcash to the secondary address
-				_, _, err = mainAccount.SendTransaction(
-					context.Background(),
-					nil,
-					Fast, // fee
-					nil,
-					func(msgtx *wire.MsgTx) bool {
-						funded, val, err := mainAccount.ScriptFunded(contractAddress.EncodeAddress(), 50000)
-						if err != nil {
-							return false
-						}
-						if !funded {
-							msgtx.AddTxOut(wire.NewTxOut(50000-val, payToContractPublicKey))
-						}
-						return !funded
-					},
-					nil,
-					func(msgtx *wire.MsgTx) bool {
-						funded, _, err := mainAccount.ScriptFunded(contractAddress.EncodeAddress(), 50000)
-						if err != nil {
-							return false
-						}
-						return funded
-					},
-					false,
-				)
+				_, _, err = mainAccount.Transfer(contractAddress, 50000, false)
 				Expect(err).Should(BeNil())
-				finalBalance, err := secondaryAccount.Balance(contractAddress.EncodeAddress(), 0)
+				finalBalance, err := secondaryAccount.Balance(contractAddress, 0)
 				Expect(err).Should(BeNil())
-				Expect(finalBalance - initialBalance).Should(Equal(int64(50000)))
+				Expect(finalBalance - initialBalance).Should(Equal(int64(40000)))
 			})
 
 			It("should withdraw 50000 ZAT from the contract address", func() {
@@ -323,41 +294,21 @@ var _ = Describe("LibZEC", func() {
 				contract, _, contractAddress := getContractDetails(spender, secondaryAccount.NetworkParams(), secret)
 				initialBalance, err := secondaryAccount.Balance(contractAddress.EncodeAddress(), 0)
 				Expect(err).Should(BeNil())
-				P2PKHScript, err := PayToAddrScript(spender)
-				Expect(err).Should(BeNil())
 
 				// building a transaction to transfer zcash to the secondary address
 				_, _, err = secondaryAccount.SendTransaction(
-					context.Background(),
+					spender.EncodeAddress(),
 					contract,
-					Fast, // fee
-					nil,
-					func(msgtx *wire.MsgTx) bool {
-						redeemed, val, err := secondaryAccount.ScriptRedeemed(contractAddress.EncodeAddress(), 50000)
-						if err != nil {
-							return false
-						}
-						if !redeemed {
-							msgtx.AddTxOut(wire.NewTxOut(val, P2PKHScript))
-						}
-						return !redeemed
-					},
+					50000,
 					func(builder *txscript.ScriptBuilder) {
 						builder.AddData(secret[:])
 					},
-					func(msgtx *wire.MsgTx) bool {
-						spent, _, err := secondaryAccount.ScriptSpent(contractAddress.EncodeAddress(), spender.EncodeAddress())
-						if err != nil {
-							return false
-						}
-						return spent
-					},
-					true,
+					false,
 				)
 				Expect(err).Should(BeNil())
 				finalBalance, err := secondaryAccount.Balance(contractAddress.EncodeAddress(), 0)
 				Expect(err).Should(BeNil())
-				Expect(initialBalance - finalBalance).Should(Equal(int64(50000)))
+				Expect(initialBalance - finalBalance).Should(Equal(int64(40000)))
 			})
 
 			It("should be able to extract details from a spent contract", func() {
@@ -371,10 +322,13 @@ var _ = Describe("LibZEC", func() {
 				Expect(err).Should(BeNil())
 				sigScriptBytes, err := hex.DecodeString(sigScript)
 				Expect(err).Should(BeNil())
+				fmt.Println("sigScript: ", hex.EncodeToString(sigScriptBytes))
 				pushes, err := txscript.PushedData(sigScriptBytes)
 				Expect(err).Should(BeNil())
 				success := false
 				for _, push := range pushes {
+					fmt.Println("push: ", hex.EncodeToString(push))
+					fmt.Println("secret: ", hex.EncodeToString(secret[:]))
 					if bytes.Compare(push, secret[:]) == 0 {
 						success = true
 					}
