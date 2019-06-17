@@ -1,6 +1,7 @@
 package libzec
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -99,6 +100,85 @@ func (client *client) UTXOCount(address string, confirmations int64) (int, error
 func (client *client) Validate(address string) error {
 	_, err := zecutil.DecodeAddress(address, client.NetworkParams().Name)
 	return err
+}
+
+func SendTransaction(
+	client Client,
+	pubKey *btcec.PublicKey,
+	to string,
+	contract []byte,
+	value int64,
+	sign func([]byte) (*btcec.Signature, error),
+	addData func(builder *txscript.ScriptBuilder),
+	sendAll bool,
+) (string, int64, error) {
+	builder := NewTxBuilder(client)
+
+	scriptHash := [20]byte{}
+	copy(scriptHash[:], btcutil.Hash160(contract))
+	scriptAddr, err := AddressFromHash160(scriptHash, client.NetworkParams(), true)
+	if err != nil {
+		return "", -1, err
+	}
+
+	pubKeyBytes, err := client.SerializePublicKey(pubKey)
+	if err != nil {
+		return "", -1, err
+	}
+
+	mwAddr, err := client.PublicKeyToAddress(pubKeyBytes)
+	if err != nil {
+		return "", -1, err
+	}
+
+	if sendAll {
+		scriptBalance, err := client.Balance(scriptAddr.EncodeAddress(), 0)
+		if err != nil {
+			return "", 0, err
+		}
+
+		mwBalance, err := client.Balance(mwAddr.EncodeAddress(), 0)
+		if err != nil {
+			return "", 0, err
+		}
+
+		value = scriptBalance + mwBalance
+	}
+
+	scIns, err := client.UTXOCount(scriptAddr.EncodeAddress(), 0)
+	if err != nil {
+		return "", -1, err
+	}
+
+	mwIns, err := client.UTXOCount(mwAddr.EncodeAddress(), 0)
+	if err != nil {
+		return "", -1, err
+	}
+
+	tx, err := builder.Build(*pubKey.ToECDSA(), to, contract, value, mwIns, scIns)
+	if err != nil {
+		return "", -1, err
+	}
+
+	sigs := make([]*btcec.Signature, mwIns+scIns)
+	for i, hash := range tx.Hashes() {
+		sig, err := sign(hash)
+		if err != nil {
+			return "", -1, err
+		}
+		sigs[i] = sig
+	}
+
+	if err := tx.InjectSigs(sigs, addData); err != nil {
+		return "", -1, err
+	}
+
+	txHash, err := tx.Submit()
+	if err != nil {
+		return "", -1, err
+	}
+
+	return hex.EncodeToString(txHash), value, nil
 }
 
 func (client *client) SlaveAddress(mpkh, nonce []byte) (btcutil.Address, error) {
