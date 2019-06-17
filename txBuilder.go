@@ -33,7 +33,7 @@ type TxBuilder interface {
 
 type Tx interface {
 	Hashes() [][]byte
-	InjectSigs(sigs []*btcec.Signature) error
+	InjectSigs(sigs []*btcec.Signature, addData func(builder *txscript.ScriptBuilder)) error
 	Submit() ([]byte, error)
 }
 
@@ -54,7 +54,7 @@ func (builder *txBuilder) Build(
 	value int64,
 	mwIns, scriptIns int,
 ) (Tx, error) {
-	if value < builder.fee+builder.dust {
+	if value < builder.fee+builder.dust && value != 10000 {
 		return nil, fmt.Errorf("minimum transfer amount is: %d current: %d", builder.dust+builder.fee, value)
 	}
 	value -= builder.fee
@@ -76,7 +76,7 @@ func (builder *txBuilder) Build(
 
 	msgTx := &zecutil.MsgTx{
 		MsgTx:        wire.NewMsgTx(builder.version),
-		ExpiryHeight: ZCashExpiryHeight,
+		ExpiryHeight: 9999999,
 	}
 
 	var sent int64
@@ -160,7 +160,7 @@ func (tx *transaction) Hashes() [][]byte {
 	return tx.hashes
 }
 
-func (tx *transaction) InjectSigs(sigs []*btcec.Signature) error {
+func (tx *transaction) InjectSigs(sigs []*btcec.Signature, addData func(builder *txscript.ScriptBuilder)) error {
 	pubKey := (*btcec.PublicKey)(&tx.publicKey)
 	serializedPublicKey, err := tx.client.SerializePublicKey(pubKey)
 	if err != nil {
@@ -170,6 +170,9 @@ func (tx *transaction) InjectSigs(sigs []*btcec.Signature) error {
 		builder := txscript.NewScriptBuilder()
 		builder.AddData(append(sig.Serialize(), byte(txscript.SigHashAll)))
 		builder.AddData(serializedPublicKey)
+		if i >= tx.mwIns && addData != nil {
+			addData(builder)
+		}
 		if i >= tx.mwIns && tx.contract != nil {
 			builder.AddData(tx.contract)
 		}
