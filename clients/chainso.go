@@ -194,7 +194,7 @@ func (client chainSoClient) GetRawAddressInformation(addr string) (RawAddress, e
 }
 
 func (client chainSoClient) ScriptSpent(script, spender string) (bool, string, error) {
-	return false, "", fmt.Errorf("TODO: chain.so api doesnot support omnilayer")
+	return false, "", fmt.Errorf("TODO: chain.so api doesnot support script spent")
 }
 
 func (client chainSoClient) ScriptFunded(address string, value int64) (bool, int64, error) {
