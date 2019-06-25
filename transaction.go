@@ -12,7 +12,7 @@ import (
 	"github.com/iqoption/zecutil"
 )
 
-const ZCashDust = 5000
+const ZCashDust = 1000
 const MaxZCashFee = int64(10000)
 const ZCashExpiryHeight = 6000000
 
@@ -88,12 +88,12 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		}
 	}
 
-	if value <= -MaxZCashFee {
+	if value < -MaxZCashFee-ZCashDust {
 		P2PKHScript, err := PayToAddrScript(addr)
 		if err != nil {
 			return err
 		}
-		tx.msgTx.AddTxOut(wire.NewTxOut(-value, P2PKHScript))
+		tx.msgTx.AddTxOut(wire.NewTxOut(-value-MaxZCashFee, P2PKHScript))
 	} else {
 		return ErrMismatchedPubKeys
 	}
