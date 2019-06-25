@@ -12,7 +12,7 @@ import (
 	"github.com/iqoption/zecutil"
 )
 
-const ZCashDust = 1000
+const ZCashDust = 600
 const MaxZCashFee = int64(10000)
 const ZCashExpiryHeight = 6000000
 

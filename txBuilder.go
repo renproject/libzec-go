@@ -121,7 +121,7 @@ func (builder *txBuilder) Build(
 		msgTx.AddTxOut(wire.NewTxOut(value, script))
 	}
 
-	if amt-value > builder.fee+600 {
+	if amt-value > builder.fee+builder.dust {
 		P2PKHScript, err := PayToAddrScript(from)
 		if err != nil {
 			return nil, err
