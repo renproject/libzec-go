@@ -88,14 +88,16 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		}
 	}
 
+	if value <= -MaxZCashFee-ZCashDust || value > -MaxZCashFee {
+		return ErrMismatchedPubKeys
+	}
+
 	if value < -MaxZCashFee-ZCashDust {
 		P2PKHScript, err := PayToAddrScript(addr)
 		if err != nil {
 			return err
 		}
 		tx.msgTx.AddTxOut(wire.NewTxOut(-value-MaxZCashFee, P2PKHScript))
-	} else {
-		return ErrMismatchedPubKeys
 	}
 	return nil
 }
