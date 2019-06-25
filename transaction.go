@@ -88,7 +88,7 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		}
 	}
 
-	if value <= -MaxZCashFee-ZCashDust || value > -MaxZCashFee {
+	if value > -MaxZCashFee {
 		return ErrMismatchedPubKeys
 	}
 
