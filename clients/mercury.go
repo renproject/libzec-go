@@ -23,12 +23,12 @@ func NewMercuryClientCore(network string) (ClientCore, error) {
 	switch network {
 	case "mainnet":
 		return &mercuryClient{
-			URL:    "https://ren-mercury.herokuapp.com/zec",
+			URL:    "http://139.59.221.34/zec",
 			Params: &chaincfg.MainNetParams,
 		}, nil
 	case "testnet", "testnet3", "":
 		return &mercuryClient{
-			URL:    "https://ren-mercury.herokuapp.com/zec-testnet",
+			URL:    "http://139.59.221.34/zec-testnet",
 			Params: &chaincfg.TestNet3Params,
 		}, nil
 	default:
