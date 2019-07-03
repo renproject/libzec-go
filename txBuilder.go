@@ -12,6 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/iqoption/zecutil"
+	"github.com/renproject/libzec-go/clients"
 )
 
 type txBuilder struct {
@@ -28,7 +29,7 @@ func NewTxBuilder(client Client) TxBuilder {
 // The TxBuilder can build txs, that allow the user to extract the hashes to be
 // signed.
 type TxBuilder interface {
-	Build(pubKey ecdsa.PublicKey, to string, contract []byte, value int64, mwIns, scriptIns int) (Tx, error)
+	Build(pubKey ecdsa.PublicKey, to string, contract []byte, value int64, mwUTXOs, scriptUTXOs []clients.UTXO) (Tx, error)
 }
 
 type Tx interface {
@@ -52,7 +53,7 @@ func (builder *txBuilder) Build(
 	to string,
 	contract []byte,
 	value int64,
-	mwIns, scriptIns int,
+	mwUTXOs, scriptUTXOs []clients.UTXO,
 ) (Tx, error) {
 	if value < builder.fee+builder.dust {
 		return nil, fmt.Errorf("minimum transfer amount is: %d current: %d", builder.dust+builder.fee, value)
@@ -81,14 +82,14 @@ func (builder *txBuilder) Build(
 
 	var sent int64
 	var amt int64
-	recvVals, pubKeyScript, err := fundZecTx(from, nil, builder.client, msgTx, mwIns)
+	recvVals, pubKeyScript, err := fundZecTx(from, nil, builder.client, msgTx, mwUTXOs)
 	if err != nil {
 		return nil, err
 	}
 	amt = sum(recvVals)
 
 	if contract != nil {
-		recvVals2, _, err := fundZecTx(from, contract, builder.client, msgTx, scriptIns)
+		recvVals2, _, err := fundZecTx(from, contract, builder.client, msgTx, scriptUTXOs)
 		if err != nil {
 			return nil, err
 		}
@@ -101,10 +102,6 @@ func (builder *txBuilder) Build(
 	if amt < value+builder.fee {
 		return nil, fmt.Errorf("insufficient balance to do the transfer:"+
 			"got: %d required: %d", amt, value+builder.fee)
-	}
-
-	if len(msgTx.TxIn) != mwIns+scriptIns {
-		return nil, fmt.Errorf("utxos spent")
 	}
 
 	fmt.Println("utxos being used: ")
@@ -130,14 +127,14 @@ func (builder *txBuilder) Build(
 	}
 
 	var hashes [][]byte
-	for i := 0; i < mwIns; i++ {
+	for i := 0; i < len(mwUTXOs); i++ {
 		hash, err := CalcSignatureHash(pubKeyScript, txscript.SigHashAll, msgTx, i, recvVals[i])
 		if err != nil {
 			return nil, err
 		}
 		hashes = append(hashes, hash)
 	}
-	for i := mwIns; i < mwIns+scriptIns; i++ {
+	for i := len(mwUTXOs); i < len(mwUTXOs)+len(scriptUTXOs); i++ {
 		hash, err := CalcSignatureHash(contract, txscript.SigHashAll, msgTx, i, recvVals[i])
 		if err != nil {
 			return nil, err
@@ -152,7 +149,7 @@ func (builder *txBuilder) Build(
 		client:    builder.client,
 		publicKey: pubKey,
 		contract:  contract,
-		mwIns:     mwIns,
+		mwIns:     len(mwUTXOs),
 	}, nil
 }
 
@@ -193,8 +190,8 @@ func (tx *transaction) Submit() ([]byte, error) {
 	return hex.DecodeString(tx.msgTx.TxHash().String())
 }
 
-func fundZecTx(from btcutil.Address, script []byte, client Client, msgTx *zecutil.MsgTx, n int) ([]int64, []byte, error) {
-	receiveValues := make([]int64, n)
+func fundZecTx(from btcutil.Address, script []byte, client Client, msgTx *zecutil.MsgTx, utxos []clients.UTXO) ([]int64, []byte, error) {
+	receiveValues := make([]int64, len(utxos))
 	if script != nil {
 		script20 := [20]byte{}
 		copy(script20[:], btcutil.Hash160(script))
@@ -203,14 +200,6 @@ func fundZecTx(from btcutil.Address, script []byte, client Client, msgTx *zecuti
 			return receiveValues, nil, err
 		}
 		from = scriptAddr
-	}
-
-	utxos, err := client.GetUTXOs(from.EncodeAddress(), int64(n), 0)
-	if err != nil {
-		return receiveValues, nil, err
-	}
-	if len(utxos) < n {
-		return receiveValues, nil, fmt.Errorf("insufficient utxos requirex: %d got: %d", n, len(utxos))
 	}
 
 	var scriptPubKey []byte

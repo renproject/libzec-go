@@ -15,6 +15,7 @@ type ClientCore interface {
 	// ZCash blockchain.
 	NetworkParams() *chaincfg.Params
 
+	GetUTXO(txhash string, vout uint32) (UTXO, error)
 	GetUTXOs(address string, limit, confitmations int64) ([]UTXO, error)
 	Confirmations(txHash string) (int64, error)
 

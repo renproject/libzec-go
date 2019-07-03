@@ -59,6 +59,26 @@ func (client *mercuryClient) GetUTXOs(address string, limit, confitmations int64
 	return utxos, nil
 }
 
+func (client *mercuryClient) GetUTXO(txhash string, vout uint32) (UTXO, error) {
+	utxo := UTXO{}
+	resp, err := http.Get(fmt.Sprintf("%s/unspent/%s?vout=%d", client.URL, txhash, vout))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		if err != nil {
+			return utxo, err
+		}
+		respErr := MercuryError{}
+		if err := json.NewDecoder(resp.Body).Decode(&respErr); err != nil {
+			return utxo, err
+		}
+		return utxo, fmt.Errorf("request failed with (%d): %s", resp.StatusCode, respErr.Error)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&utxo); err != nil {
+		return utxo, err
+	}
+	return utxo, nil
+}
+
 func (client *mercuryClient) Confirmations(txHash string) (int64, error) {
 	var conf btc.GetConfirmationsResponse
 	resp, err := http.Get(fmt.Sprintf("%s/confirmations/%s", client.URL, txHash))

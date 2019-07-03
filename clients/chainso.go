@@ -169,6 +169,10 @@ func (client chainSoClient) Confirmations(txHashStr string) (int64, error) {
 	return 0, fmt.Errorf("TODO: chain.so api doesnot support confirmations")
 }
 
+func (client chainSoClient) GetUTXO(txhash string, vout uint32) (UTXO, error) {
+	panic("unimplemented")
+}
+
 func (client chainSoClient) GetRawAddressInformation(addr string) (RawAddress, error) {
 	addressInfo := RawAddress{}
 	csoResp := ChainSoResponse{}
