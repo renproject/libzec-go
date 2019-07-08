@@ -172,5 +172,6 @@ func (tx *tx) submit() error {
 	if err := tx.msgTx.ZecEncode(buf, 0, wire.BaseEncoding); err != nil {
 		return err
 	}
+	fmt.Printf("zec submit bytes=%x\n", buf.Bytes())
 	return tx.account.PublishTransaction(buf.Bytes())
 }
