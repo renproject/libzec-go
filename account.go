@@ -98,6 +98,8 @@ func (account *account) Transfer(ctx context.Context, to string, value int64, sp
 		value = balance
 	}
 
+	value -= MaxZCashFee
+
 	address, err := DecodeAddress(to, account.NetworkParams())
 	if err != nil {
 		return "", 0, err

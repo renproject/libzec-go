@@ -162,14 +162,14 @@ var _ = Describe("LibZEC", func() {
 				Expect(err).Should(BeNil())
 			})
 
-			It("should transfer 10000 ZAT to another address", func() {
+			It("should transfer 5000000 ZAT to another address", func() {
 				mainAccount, secondaryAccount := getAccounts(client)
 				secAddr, err := secondaryAccount.Address()
 				Expect(err).Should(BeNil())
 				initialBalance, err := secondaryAccount.Balance(secAddr.EncodeAddress(), 0)
 				Expect(err).Should(BeNil())
 				// building a transaction to transfer zcash to the secondary address
-				_, _, err = mainAccount.Transfer(context.Background(), secAddr.EncodeAddress(), 5000000, Fast, false)
+				_, _, err = mainAccount.Transfer(context.Background(), secAddr.EncodeAddress(), 5010000, Fast, false)
 				Expect(err).Should(BeNil())
 				finalBalance, err := secondaryAccount.Balance(secAddr.EncodeAddress(), 0)
 				Expect(err).Should(BeNil())
@@ -227,7 +227,7 @@ var _ = Describe("LibZEC", func() {
 				Expect(err).Should(BeNil())
 				slaveScript, err := mainAccount.SlaveScript(btcutil.Hash160(pubKeyBytes), nonce[:])
 				Expect(err).Should(BeNil())
-				_, _, err = mainAccount.Transfer(ctx, slaveAddr.String(), 20000, Fast, false)
+				_, _, err = mainAccount.Transfer(ctx, slaveAddr.String(), 30000, Fast, false)
 				Expect(err).Should(BeNil())
 
 				mainAddr, err := mainAccount.Address()

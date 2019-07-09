@@ -99,6 +99,7 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		}
 		tx.msgTx.AddTxOut(wire.NewTxOut(-value-MaxZCashFee, P2PKHScript))
 	}
+
 	return nil
 }
 
