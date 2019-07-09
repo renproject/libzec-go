@@ -92,11 +92,13 @@ func (tx *tx) fund(addr btcutil.Address) error {
 		return ErrMismatchedPubKeys
 	}
 
+	fmt.Printf("value = %d -MaxZCashFee-ZCashDust= %d\n", value, -MaxZCashFee-ZCashDust)
 	if value < -MaxZCashFee-ZCashDust {
 		P2PKHScript, err := PayToAddrScript(addr)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("-value-MaxZCashFee = %d\n", -value-MaxZCashFee)
 		tx.msgTx.AddTxOut(wire.NewTxOut(-value-MaxZCashFee, P2PKHScript))
 	}
 	return nil
